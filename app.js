@@ -477,113 +477,202 @@ function getSeverity(log) {
 
 function getSummary(log) {
 
-  const eventType = log.event_type;
-
-  switch (eventType) {
-
-      case "alert": {
-          const signature = log.alert?.signature;
-          const category = log.alert?.category;
-
-          if (signature && category) {
-              return `${signature} (${category})`;
-          }
-
-          return (
-              signature ||
-              category ||
-              log.alert?.action ||
-              "Security alert detected"
-          );
-      }
-
-      case "http": {
-          const method = log.http?.http_method || log.http?.method;
-          const hostname = log.http?.hostname || log.http?.host;
-          const url = log.http?.url;
-
-          const parts = [];
-
-          if (method) {
-              parts.push(method);
-          }
-
-          if (hostname) {
-              parts.push(hostname);
-          }
-
-          if (url) {
-              parts.push(url);
-          }
-
-          if (log.http?.status) {
-              parts.push(`Status ${log.http.status}`);
-          }
-
-          return parts.join(" ") || "HTTP event";
-      }
-
-      case "dns": {
-          const type = log.dns?.type;
-          const query =
-              log.dns?.rrname ||
-              log.dns?.query;
-
-          if (type && query) {
-              return `${type} query for ${query}`;
-          }
-
-          return query || "DNS event";
-      }
-
-      case "tls": {
-          const sni = log.tls?.sni;
-          const version = log.tls?.version;
-
-          if (sni && version) {
-              return `TLS ${version} connection to ${sni}`;
-          }
-
-          return sni
-              ? `TLS connection to ${sni}`
-              : "TLS event";
-      }
-
-      case "ssh":
-          return log.ssh?.client
-              ? `SSH client: ${log.ssh.client}`
-              : "SSH event";
-
-      case "flow":
-          return log.flow?.state
-              ? `Flow state: ${log.flow.state}`
-              : "Network flow";
-
-      case "fileinfo":
-          return log.fileinfo?.filename
-              ? `File: ${log.fileinfo.filename}`
-              : "File information event";
-
-      case "stats":
-          return "Suricata statistics";
-
-      case "anomaly":
-          return (
-              log.anomaly?.event ||
-              log.anomaly?.type ||
-              "Network anomaly detected"
-          );
-
-      case "drop":
-          return "Packet dropped";
-
-      default:
-          return (
-              log.message ||
-              log.event_type ||
-              "Suricata event"
-          );
-  }
+    const eventType = log.event_type;
+  
+    // Helper: bold title + optional muted subtitle line
+    const build = (title, subtitle) => {
+        let html = `<strong>${escapeHtml(title)}</strong>`;
+        if (subtitle) {
+            html += `<br><span class="summary-category">${escapeHtml(subtitle)}</span>`;
+        }
+        return html;
+    };
+  
+    switch (eventType) {
+  
+        case "alert": {
+            const signature = log.alert?.signature;
+            const category = log.alert?.category;
+            const action = log.alert?.action;
+  
+            const title = signature || action || "Security alert detected";
+  
+            return build(
+                title,
+                category ? `Category: ${category}` : ""
+            );
+        }
+  
+        case "http": {
+            const method = log.http?.http_method || log.http?.method;
+            const hostname = log.http?.hostname || log.http?.host;
+            const url = log.http?.url;
+            const status = log.http?.status;
+            const userAgent = log.http?.http_user_agent;
+  
+            const title =
+                method && hostname
+                    ? `${method} ${hostname}`
+                    : method || hostname || url || "HTTP event";
+  
+            const subtitleParts = [];
+  
+            if (url && url !== title) {
+                subtitleParts.push(url);
+            }
+  
+            if (status) {
+                subtitleParts.push(`Status ${status}`);
+            }
+  
+            if (userAgent) {
+                subtitleParts.push(userAgent);
+            }
+  
+            return build(title, subtitleParts.join(" · "));
+        }
+  
+        case "dns": {
+            const type = log.dns?.type;
+            const query = log.dns?.rrname || log.dns?.query;
+            const rcode = log.dns?.rcode;
+  
+            const title = query || "DNS event";
+  
+            const subtitleParts = [];
+  
+            if (type) {
+                subtitleParts.push(`Type: ${type}`);
+            }
+  
+            if (rcode) {
+                subtitleParts.push(`Rcode: ${rcode}`);
+            }
+  
+            return build(title, subtitleParts.join(" · "));
+        }
+  
+        case "tls": {
+            const sni = log.tls?.sni;
+            const version = log.tls?.version;
+            const subject = log.tls?.subject;
+  
+            const title = sni || subject || "TLS event";
+  
+            const subtitleParts = [];
+  
+            if (version) {
+                subtitleParts.push(`Version: ${version}`);
+            }
+  
+            if (subject && subject !== title) {
+                subtitleParts.push(subject);
+            }
+  
+            return build(title, subtitleParts.join(" · "));
+        }
+  
+        case "ssh": {
+            const client = log.ssh?.client;
+            const server = log.ssh?.server;
+  
+            const formatSoftware = (side) => {
+                if (!side) return "";
+                if (typeof side === "string") return side;
+  
+                const parts = [];
+                if (side.software_version) parts.push(side.software_version);
+                if (side.proto_version) parts.push(`proto ${side.proto_version}`);
+                return parts.join(" ");
+            };
+  
+            const clientText = formatSoftware(client);
+            const serverText = formatSoftware(server);
+  
+            const title =
+                clientText
+                    ? `SSH client: ${clientText}`
+                    : serverText
+                        ? `SSH server: ${serverText}`
+                        : "SSH event";
+  
+            const subtitle =
+                clientText && serverText
+                    ? `Server: ${serverText}`
+                    : "";
+  
+            return build(title, subtitle);
+        }
+  
+        case "flow": {
+            const state = log.flow?.state;
+            const reason = log.flow?.reason;
+            const bytes = log.flow?.bytes_toserver;
+  
+            const title = state ? `Flow state: ${state}` : "Network flow";
+  
+            const subtitleParts = [];
+  
+            if (reason) {
+                subtitleParts.push(`Reason: ${reason}`);
+            }
+  
+            if (bytes !== undefined && bytes !== null) {
+                subtitleParts.push(`Bytes: ${bytes}`);
+            }
+  
+            return build(title, subtitleParts.join(" · "));
+        }
+  
+        case "fileinfo": {
+            const filename = log.fileinfo?.filename;
+            const magic = log.fileinfo?.magic;
+            const md5 = log.fileinfo?.md5;
+  
+            const title = filename || "File information event";
+  
+            const subtitleParts = [];
+  
+            if (magic) {
+                subtitleParts.push(magic);
+            }
+  
+            if (md5) {
+                subtitleParts.push(`MD5: ${md5}`);
+            }
+  
+            return build(title, subtitleParts.join(" · "));
+        }
+  
+        case "stats":
+            return build("Suricata statistics");
+  
+        case "anomaly": {
+            const event = log.anomaly?.event;
+            const type = log.anomaly?.type;
+  
+            const title = event || type || "Network anomaly detected";
+  
+            const subtitle =
+                event && type
+                    ? `Type: ${type}`
+                    : "";
+  
+            return build(title, subtitle);
+        }
+  
+        case "drop":
+            return build("Packet dropped");
+  
+        default: {
+            const title =
+                log.message ||
+                log.event_type ||
+                "Suricata event";
+  
+            return build(title);
+        }
+    }
 }
 
 
@@ -674,7 +763,7 @@ function renderTable() {
           </td>
 
           <td class="summary">
-              ${escapeHtml(getSummary(log))}
+            ${getSummary(log)}
           </td>
 
           <td>

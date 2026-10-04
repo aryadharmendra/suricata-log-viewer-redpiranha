@@ -506,3 +506,8 @@ body {
       width: 100%;
   }
 }
+
+.summary-category {
+  color: #6b7280;
+  font-size: 0.9em;
+}
