@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suricata Log Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+
+    <header class="page-header">
+        <div>
+            <h1>Suricata Log Viewer</h1>
+            <p>Browse, filter and sort Suricata JSONL events.</p>
+        </div>
+
+        <label class="upload-button">
+            Upload JSONL
+            <input type="file" id="fileInput" accept=".jsonl,.json,.txt">
+        </label>
+    </header>
+
+    <section class="upload-panel">
+        <div id="dropZone" class="drop-zone">
+            <strong>eve-sample.jsonl</strong>
+            <span>is loaded automatically when available.</span>
+            <small>Or drag & drop another JSONL file here.</small>
+        </div>
+
+        <div id="fileStatus" class="file-status">
+            Loading eve-sample.jsonl...
+        </div>
+    </section>
+
+    <section class="toolbar">
+
+        <div class="control-group">
+            <label for="eventType">Event Type</label>
+            <select id="eventType">
+                <option value="all">All Events</option>
+            </select>
+        </div>
+
+        <div class="control-group search-control">
+            <label for="searchInput">Search</label>
+            <input
+                type="search"
+                id="searchInput"
+                placeholder="Search logs..."
+            >
+        </div>
+
+        <div class="control-group">
+            <label for="sortOrder">Timestamp</label>
+            <select id="sortOrder">
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+            </select>
+        </div>
+
+        <button id="clearButton" class="secondary-button">
+            Clear
+        </button>
+
+    </section>
+
+    <div id="errorBox" class="error-box hidden"></div>
+
+    <section class="result-bar">
+        <div id="resultCount">0 events</div>
+        <div id="pageInfo"></div>
+    </section>
+
+    <section class="table-container">
+
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th class="severity-column">Severity</th>
+                    <th>Timestamp</th>
+                    <th>Event Type</th>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Protocol</th>
+                    <th>Summary</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+
+            <tbody id="logTableBody">
+            </tbody>
+        </table>
+
+        <div id="emptyState" class="empty-state hidden">
+            <h3>No events found</h3>
+            <p>Try changing the filter or search criteria.</p>
+        </div>
+
+    </section>
+
+    <nav id="pagination" class="pagination"></nav>
+
+</div>
+
+<div id="jsonModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Raw Event</h3>
+            <button id="closeModal" class="close-button">&times;</button>
+        </div>
+
+        <pre id="rawJson"></pre>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
